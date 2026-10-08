@@ -1,0 +1,1075 @@
+<title>Genie Map Collections</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Unbounded:wght@600&display=swap">
+<style>
+/* Layout: рабочая очередь на всю ширину, сводка сверху, карточка клиента выезжает справа */
+:root {
+  --bg: #f4f6f5; --surface: #ffffff; --surface-2: #eef1ef; --ink: #15201d; --muted: #5d6a66;
+  --line: #dbe1de; --accent: #0d6b5f; --accent-ink: #ffffff; --accent-soft: #dcefeb;
+  --crit: #c2362b; --high: #d4691c; --med: #b58a10; --low: #6f7f7a; --ok: #2f8a4b;
+  --t-violet: #6b4bc4; --t-blue: #2264b8; --t-slate: #5d6a73; --t-amber: #b07400; --t-rose: #c23a6b;
+  --t-red: #c2362b; --t-green: #2f8a4b; --t-teal: #0d7f72;
+  --shadow: 0 12px 40px rgba(16, 32, 28, .18);
+  --f-display: "Unbounded", "Onest", system-ui, sans-serif;
+  --f-body: "Onest", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1412; --surface: #151d1b; --surface-2: #1b2522; --ink: #e3ebe8; --muted: #93a29e;
+    --line: #27322f; --accent: #3dbfa8; --accent-ink: #062520; --accent-soft: #173a34;
+    --crit: #f06b5f; --high: #f0954f; --med: #e2b84a; --low: #8c9b97; --ok: #5cc27a;
+    --t-violet: #a48cf0; --t-blue: #6aa6f0; --t-slate: #9aa8b0; --t-amber: #e6ad45; --t-rose: #ef7aa5;
+    --t-red: #f06b5f; --t-green: #5cc27a; --t-teal: #4fd0bb;
+    --shadow: 0 12px 40px rgba(0, 0, 0, .5); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1412; --surface: #151d1b; --surface-2: #1b2522; --ink: #e3ebe8; --muted: #93a29e;
+  --line: #27322f; --accent: #3dbfa8; --accent-ink: #062520; --accent-soft: #173a34;
+  --crit: #f06b5f; --high: #f0954f; --med: #e2b84a; --low: #8c9b97; --ok: #5cc27a;
+  --t-violet: #a48cf0; --t-blue: #6aa6f0; --t-slate: #9aa8b0; --t-amber: #e6ad45; --t-rose: #ef7aa5;
+  --t-red: #f06b5f; --t-green: #5cc27a; --t-teal: #4fd0bb;
+  --shadow: 0 12px 40px rgba(0, 0, 0, .5); color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--f-body); }
+button, input, select, textarea { font: inherit; color: inherit; }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+.muted { color: var(--muted); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.wrap { max-width: 1320px; margin: 0 auto; padding-inline: 20px; }
+
+/* Header */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-block: 12px; }
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; }
+.brand b { font-family: var(--f-display); font-weight: 600; font-size: 17px; letter-spacing: -.02em; }
+.brand span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.clock { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.clock .date { padding: 6px 10px; border-radius: 8px; background: var(--surface-2); font-size: 13px; }
+
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 7px 12px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+.btn.small { padding: 4px 9px; font-size: 12.5px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* KPI */
+.kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-block: 18px 14px; }
+.kpi { background: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kpi .label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.kpi .value { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 600; letter-spacing: -.03em; }
+.kpi .sub { font-size: 12px; color: var(--muted); }
+.kpi .value.good { color: var(--ok); }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 14px; overflow-x: auto; }
+.tab { border: 0; background: none; padding: 10px 12px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+.tab .count { font-family: var(--f-mono); font-size: 11px; background: var(--surface-2); padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
+
+/* Filters */
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.filters input[type=search], .filters select { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 10px; }
+.filters input[type=search] { min-width: 0; flex: 1 1 200px; max-width: 280px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 10px; font-size: 12.5px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.bulk { display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: var(--accent-soft); border-radius: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+
+/* Table */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 980px; }
+th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 500; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--surface); position: sticky; top: 0; }
+td { padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+tbody tr.row { cursor: pointer; }
+tbody tr.row:hover td { background: var(--surface-2); }
+td.r, th.r { text-align: right; }
+.co { font-weight: 600; }
+.co small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+
+.prio { display: flex; align-items: center; gap: 8px; }
+.prio .score { font-family: var(--f-mono); font-weight: 600; width: 26px; text-align: right; }
+.prio .bar { width: 46px; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.prio .bar i { display: block; height: 100%; border-radius: 3px; }
+.sev-crit { --sev: var(--crit); } .sev-high { --sev: var(--high); } .sev-med { --sev: var(--med); } .sev-low { --sev: var(--low); }
+.prio .bar i, .sevdot { background: var(--sev); }
+.prio .score { color: var(--sev); }
+.sevdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+
+.pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 500; white-space: nowrap;
+  color: var(--tone); background: color-mix(in srgb, var(--tone) 13%, transparent); }
+.tone-violet { --tone: var(--t-violet); } .tone-blue { --tone: var(--t-blue); } .tone-slate { --tone: var(--t-slate); }
+.tone-amber { --tone: var(--t-amber); } .tone-rose { --tone: var(--t-rose); } .tone-red { --tone: var(--t-red); }
+.tone-green { --tone: var(--t-green); } .tone-teal { --tone: var(--t-teal); }
+.action-cell { font-size: 13px; max-width: 260px; }
+.auto { font-size: 12px; color: var(--accent); white-space: nowrap; }
+.aging { display: flex; gap: 2px; }
+.aging i { width: 8px; height: 14px; border-radius: 2px; background: var(--surface-2); }
+.aging i.on { background: var(--sev); }
+
+.empty { padding: 40px 16px; text-align: center; color: var(--muted); }
+
+/* Drawer */
+.scrim { position: fixed; inset: 0; background: rgba(10, 20, 18, .35); z-index: 40; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(640px, 100%); background: var(--bg); z-index: 41; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.drawer header { background: var(--surface); border-bottom: 1px solid var(--line); padding: 16px 20px; display: flex; gap: 12px; align-items: flex-start; }
+.drawer header h2 { margin: 0; font-size: 18px; text-wrap: balance; }
+.drawer header .meta { color: var(--muted); font-size: 12.5px; margin-top: 4px; display: flex; gap: 6px 14px; flex-wrap: wrap; }
+.drawer .body { overflow-y: auto; padding: 16px 20px 40px; display: flex; flex-direction: column; gap: 14px; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.fact { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.fact .label { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.fact .value { font-family: var(--f-mono); font-size: 17px; font-weight: 600; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.panel h3 { margin: 0; font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.panel.reco { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.reco-title { font-size: 16px; font-weight: 600; }
+.evidence { margin: 0; padding-left: 18px; color: var(--ink); }
+.evidence li { margin: 2px 0; }
+.row-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 12px; color: var(--muted); }
+.field input, .field textarea, .field select, .inline select, .inline input { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; background: var(--bg); }
+.field textarea { min-height: 150px; resize: vertical; line-height: 1.5; }
+.inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mini { width: 100%; min-width: 0; font-size: 13px; }
+.mini th, .mini td { padding: 6px 8px; }
+.mini { min-width: 0; }
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.timeline li { display: grid; grid-template-columns: 74px 1fr; gap: 10px; }
+.timeline .when { font-size: 12px; color: var(--muted); font-family: var(--f-mono); }
+.timeline .what b { font-weight: 600; }
+.timeline .what p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; white-space: pre-line; }
+.tag { font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--surface-2); color: var(--muted); margin-left: 6px; }
+.tag.auto { background: var(--accent-soft); color: var(--accent); }
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.steps li { display: flex; gap: 10px; align-items: center; font-size: 13px; }
+.steps .d { font-family: var(--f-mono); color: var(--muted); width: 64px; flex: none; }
+.steps .done { color: var(--muted); text-decoration: line-through; }
+.paid-banner { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); padding: 10px 14px; border-radius: 10px; font-weight: 600; }
+
+/* Lists */
+.list { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.list .item { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.list .item:last-child { border-bottom: 0; }
+.list .item .main { flex: 1; min-width: 0; }
+.list .item .main p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; white-space: pre-line; overflow-wrap: anywhere; }
+.list .item .side { font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; }
+.overdue-t { color: var(--crit); font-weight: 600; }
+.link { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font-weight: 600; text-align: left; }
+.section-title { font-size: 13px; font-weight: 600; margin: 18px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+
+/* Analytics */
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.chart svg { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font-size: 11px; font-family: var(--f-body); }
+.chart .v { fill: var(--ink); font-family: var(--f-mono); }
+.chart .grid { stroke: var(--line); }
+.hbar { display: grid; grid-template-columns: minmax(0, 170px) 1fr auto; gap: 10px; align-items: center; font-size: 13px; }
+.hbar .track { height: 10px; background: var(--surface-2); border-radius: 5px; overflow: hidden; }
+.hbar .track i { display: block; height: 100%; background: var(--tone); border-radius: 5px; }
+.hbars { display: flex; flex-direction: column; gap: 8px; }
+.pb { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; z-index: 60; font-size: 13.5px; max-width: calc(100% - 32px); }
+.note { font-size: 12.5px; color: var(--muted); }
+footer.wrap { padding-block: 24px 40px; }
+
+@media (max-width: 900px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid2, .pb { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  .wrap { padding-inline: 16px; }
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .drawer header, .drawer .body { padding-inline: 16px; }
+  .hbar { grid-template-columns: minmax(0, 110px) 1fr auto; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .drawer { animation: slide .18s ease-out; }
+  @keyframes slide { from { transform: translateX(24px); opacity: .6; } }
+}
+.row-actions select { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; background: var(--bg); max-width: 100%; }
+.panel h3 .pill { text-transform: none; letter-spacing: 0; }
+</style>
+<div id="app"></div>
+<script>
+// Демо-данные: компании с регулярными счетами (подписка, ежемесячный биллинг).
+// Даты хранятся как номер дня относительно «сегодня» на момент первого запуска (день 0).
+(function () {
+  function rng(seed) {
+    let s = seed >>> 0;
+    return function () {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 4294967296;
+    };
+  }
+
+  // [компания, отрасль, контакт, тариф, MRR, срок оплаты, профиль]
+  const COMPANIES = [
+    ["ТОО «Каспий Логистик»", "Логистика", "Ерлан Сапаров", "Enterprise", 1840000, 30, "forgot"],
+    ["АО «Нурбанк Сервис»", "Финансы", "Динара Абенова", "Enterprise", 2650000, 30, "admin"],
+    ["ТОО «Алтын Агро»", "Агро", "Марат Жумабеков", "Business", 420000, 15, "hardship"],
+    ["ООО «Северный Ритейл»", "Ритейл", "Ольга Крылова", "Business", 610000, 30, "payment_failed"],
+    ["ТОО «Медикал Плюс»", "Медицина", "Айгерим Касымова", "Business", 380000, 15, "dispute"],
+    ["ТОО «СтройМаркет KZ»", "Строительство", "Нурлан Ахметов", "Enterprise", 1290000, 30, "unresponsive"],
+    ["ТОО «Smart Office»", "IT-услуги", "Алия Бекова", "Starter", 95000, 15, "forgot"],
+    ["ТОО «Достык Фуд»", "HoReCa", "Тимур Ибраев", "Business", 270000, 15, "churn_risk"],
+    ["АО «ЭнергоТрейд»", "Энергетика", "Виктор Ли", "Enterprise", 3120000, 45, "admin"],
+    ["ТОО «Green Pharm»", "Фармацевтика", "Камила Нургалиева", "Business", 540000, 30, "payment_failed"],
+    ["ТОО «Арна Девелопмент»", "Девелопмент", "Серик Омаров", "Business", 760000, 30, "hardship"],
+    ["ТОО «QazEdu Online»", "Образование", "Жанна Утепова", "Starter", 120000, 15, "unresponsive"],
+    ["ТОО «Атлас Моторс»", "Авто", "Руслан Мамедов", "Business", 450000, 30, "dispute"],
+    ["ТОО «Бирлик Транс»", "Логистика", "Асхат Кенжебаев", "Business", 330000, 15, "forgot"],
+    ["ООО «Вектор Консалт»", "Консалтинг", "Анна Петрова", "Starter", 160000, 15, "churn_risk"],
+    ["ТОО «Tengri Hotels»", "HoReCa", "Мадина Серикова", "Enterprise", 980000, 30, "promise_kept"],
+    ["ТОО «Шанырак Мебель»", "Производство", "Бауыржан Тулегенов", "Business", 290000, 30, "promise_broken"],
+    ["ТОО «Altyn Clinic»", "Медицина", "Гульнара Ермекова", "Starter", 140000, 15, "payment_failed"],
+    ["ТОО «Номад Трэвел»", "Туризм", "Ержан Касенов", "Business", 360000, 15, "unresponsive"],
+    ["ТОО «ПромСнаб Восток»", "Производство", "Сергей Ким", "Enterprise", 1560000, 45, "hardship"],
+    ["ТОО «Kids Planet»", "Ритейл", "Сауле Мухтарова", "Starter", 88000, 15, "forgot"],
+    ["ТОО «Цифровой Документ»", "IT-услуги", "Дмитрий Орлов", "Business", 510000, 30, "admin"],
+    ["ТОО «Батыс Ойл Сервис»", "Нефтегаз", "Арман Исаев", "Enterprise", 2240000, 30, "unknown"],
+    ["ТОО «Ак Жол Строй»", "Строительство", "Талгат Сейткали", "Business", 470000, 30, "churn_risk"],
+    ["ТОО «Мега Принт»", "Полиграфия", "Ирина Ковалёва", "Starter", 110000, 15, "dispute"],
+    ["ТОО «Eurasia Fitness»", "Спорт", "Даурен Абилов", "Business", 230000, 15, "forgot"],
+  ];
+
+  const OWNERS = ["Аида К.", "Санжар М.", "Лаура Т."];
+
+  // профиль -> сколько счетов просрочено и на сколько дней (максимум)
+  const PROFILE_DAYS = {
+    forgot: [6, 18], admin: [20, 50], hardship: [35, 95], payment_failed: [3, 25],
+    dispute: [25, 70], unresponsive: [40, 120], churn_risk: [30, 75],
+    promise_kept: [15, 30], promise_broken: [45, 70], unknown: [20, 60],
+  };
+
+  function slug(name) {
+    return name.replace(/[«»"]/g, "").replace(/^(ТОО|АО|ООО)\s+/, "").toLowerCase()
+      .replace(/[^a-zа-я0-9]+/g, "").slice(0, 10);
+  }
+
+  window.generateSeed = function () {
+    const r = rng(20261008);
+    let invNo = 4100;
+    const accounts = COMPANIES.map(function (c, i) {
+      const [name, industry, contact, plan, mrr, terms, profile] = c;
+      const range = PROFILE_DAYS[profile];
+      const maxOverdue = Math.round(range[0] + r() * (range[1] - range[0]));
+      const invoices = [];
+      // Ежемесячные счета за последние ~5 месяцев. Самый старый неоплаченный просрочен на maxOverdue.
+      const unpaidCount = Math.max(1, Math.min(4, Math.floor(maxOverdue / 30) + 1));
+      for (let k = 0; k < 6; k++) {
+        // k = 0 самый старый
+        const ageIndex = 5 - k; // сколько месяцев назад
+        const due = -maxOverdue + (unpaidCount - 1 - ageIndex) * 30;
+        const issued = due - terms;
+        if (issued > 0) continue;
+        const amount = Math.round(mrr * (0.95 + r() * 0.1) / 1000) * 1000;
+        const isUnpaid = ageIndex < unpaidCount && due < 0;
+        invoices.push({
+          id: "inv" + invNo, number: "INV-" + invNo++, amount: amount, issued: issued, due: due,
+          paid: isUnpaid ? 0 : amount, paidOn: isUnpaid ? null : due + Math.round(r() * 6 - 2),
+        });
+      }
+      const onTimeBase = { forgot: 0.92, admin: 0.7, hardship: 0.45, payment_failed: 0.88, dispute: 0.75,
+        unresponsive: 0.4, churn_risk: 0.6, promise_kept: 0.7, promise_broken: 0.5, unknown: 0.65 }[profile];
+
+      const s = {
+        cardFailed: profile === "payment_failed",
+        cardFailReason: profile === "payment_failed" ? ["Карта просрочена", "Недостаточно средств", "Отклонено банком"][i % 3] : null,
+        dispute: profile === "dispute" ? [
+          "Клиент считает, что в счёт включены 12 лицензий вместо 8",
+          "Оспаривают начисление за перерасход по API",
+          "Просят скидку за простой сервиса 14 сентября",
+        ][i % 3] : null,
+        poRequired: profile === "admin",
+        apNote: profile === "admin" ? ["Нужен номер заказа (PO) в счёте", "Счёт не прошёл согласование в бухгалтерии", "Требуют акт сверки перед оплатой"][i % 3] : null,
+        installmentRequest: profile === "hardship" && i % 2 === 0,
+        partialPayments: profile === "hardship",
+        usageDrop: profile === "churn_risk" ? 45 + Math.round(r() * 30) : Math.round(r() * 15),
+        openTickets: profile === "churn_risk" ? 2 + Math.floor(r() * 3) : Math.floor(r() * 2),
+        bounced: profile === "unresponsive" && i % 2 === 1,
+        lastReplyDaysAgo: profile === "unresponsive" ? 30 + Math.round(r() * 40) : Math.round(r() * 12),
+        promise: null,
+      };
+      // частичная оплата для «трудностей»
+      if (profile === "hardship") {
+        const old = invoices.find(function (v) { return v.paid < v.amount; });
+        if (old) old.paid = Math.round(old.amount * 0.3 / 1000) * 1000;
+      }
+      if (profile === "promise_kept") s.promise = { day: 3, amount: null, madeOn: -4 };
+      if (profile === "promise_broken") s.promise = { day: -6, amount: null, madeOn: -16 };
+
+      const handle = slug(name);
+      return {
+        id: "acc" + (i + 1), name: name, industry: industry, plan: plan, mrr: mrr, terms: terms,
+        owner: OWNERS[i % OWNERS.length],
+        contact: { name: contact, email: "billing@" + handle + ".kz", phone: "+7 7" + (10 + i) + " " + (200 + i * 7) + " " + (10 + i) + " " + (40 + i) },
+        onTimeRate: Math.min(0.98, Math.max(0.2, onTimeBase + (r() - 0.5) * 0.1)),
+        signals: s, invoices: invoices, profile: profile,
+        reasonOverride: null, automation: null, payments: [],
+      };
+    });
+
+    // Немного истории коммуникаций, чтобы лента не была пустой
+    const comms = [];
+    accounts.forEach(function (a, idx) {
+      if (a.profile === "unresponsive" || a.profile === "promise_broken") {
+        comms.push({ id: "c" + idx + "a", accountId: a.id, day: -14, channel: "email", auto: true,
+          subject: "Напоминание об оплате", body: "Автоматическое напоминание о просроченном счёте.", status: "Без ответа" });
+      }
+      if (a.profile === "promise_kept" || a.profile === "promise_broken") {
+        comms.push({ id: "c" + idx + "b", accountId: a.id, day: a.signals.promise.madeOn, channel: "call", auto: false,
+          subject: "Звонок: обещание оплатить", body: a.contact.name + " пообещал(а) оплатить задолженность до " + "указанной даты.", status: "Обещание оплаты" });
+      }
+      if (a.profile === "dispute") {
+        comms.push({ id: "c" + idx + "c", accountId: a.id, day: -9, channel: "email", auto: false, inbound: true,
+          subject: "Re: Счёт к оплате", body: a.signals.dispute + ".", status: "Входящее" });
+      }
+    });
+
+    const tasks = [
+      { id: "t1", accountId: "acc5", due: 0, title: "Согласовать корректировку счёта с аккаунт-менеджером", done: false },
+      { id: "t2", accountId: "acc17", due: -1, title: "Перезвонить: обещание оплаты нарушено", done: false },
+      { id: "t3", accountId: "acc2", due: 2, title: "Получить номер PO от закупок", done: false },
+    ];
+
+    return { day: 0, accounts: accounts, comms: comms, tasks: tasks, seq: 100, recoveredLog: [] };
+  };
+})();
+</script>
+<script>
+// Правила: причина неоплаты, приоритет, рекомендованное действие, автопоследовательности.
+(function () {
+  const REASONS = {
+    dispute:        { label: "Спор по счёту",          tone: "violet" },
+    payment_failed: { label: "Сбой платежа",           tone: "blue" },
+    admin:          { label: "Бюрократия / согласование", tone: "slate" },
+    hardship:       { label: "Финансовые трудности",   tone: "amber" },
+    churn_risk:     { label: "Риск оттока",            tone: "rose" },
+    unresponsive:   { label: "Нет ответа",             tone: "red" },
+    forgot:         { label: "Забыли оплатить",        tone: "green" },
+    promise:        { label: "Обещание оплаты",        tone: "teal" },
+    unknown:        { label: "Не определена",          tone: "slate" },
+  };
+
+  const ACTIONS = {
+    reminder:      { label: "Отправить вежливое напоминание", channel: "email" },
+    card_update:   { label: "Отправить ссылку на обновление карты", channel: "email" },
+    retry_charge:  { label: "Повторить списание", channel: "system" },
+    resolve_dispute:{ label: "Передать аккаунт-менеджеру и скорректировать счёт", channel: "task" },
+    po_request:    { label: "Запросить PO / документы для бухгалтерии", channel: "email" },
+    payment_plan:  { label: "Предложить график рассрочки", channel: "email" },
+    cs_checkin:    { label: "Подключить Customer Success", channel: "task" },
+    call:          { label: "Позвонить контакту", channel: "call" },
+    find_contact:  { label: "Найти другой контакт (ЛПР / бухгалтерия)", channel: "task" },
+    wait_promise:  { label: "Ждать оплату по обещанию", channel: "none" },
+    final_notice:  { label: "Направить уведомление о приостановке", channel: "email" },
+    suspend:       { label: "Приостановить сервис", channel: "system" },
+    agency:        { label: "Передать в коллекторское агентство / юристам", channel: "task" },
+    ask_reason:    { label: "Выяснить причину неоплаты", channel: "email" },
+  };
+
+  const TEMPLATES = {
+    reminder: { subject: "Напоминание: счёт {invoices} к оплате",
+      body: "Здравствуйте, {contact}!\n\nНапоминаем, что по счёту {invoices} на сумму {amount} срок оплаты истёк {days} дн. назад. Возможно, платёж просто затерялся.\n\nОплатить можно по ссылке: {link}\n\nЕсли оплата уже отправлена, просто ответьте на это письмо.\n\nС уважением,\nкоманда биллинга" },
+    card_update: { subject: "Не удалось списать оплату по подписке",
+      body: "Здравствуйте, {contact}!\n\nМы не смогли списать оплату {amount} ({cardReason}). Чтобы сервис для {company} работал без перерывов, обновите платёжные данные по ссылке: {link}\n\nПосле обновления мы повторим списание автоматически." },
+    po_request: { subject: "Документы для оплаты счёта {invoices}",
+      body: "Здравствуйте, {contact}!\n\nЧтобы ускорить согласование счёта {invoices} ({amount}), подскажите, какие документы нужны вашей бухгалтерии: номер PO, акт сверки или закрывающие документы? Мы подготовим их в течение дня." },
+    payment_plan: { subject: "Вариант рассрочки для {company}",
+      body: "Здравствуйте, {contact}!\n\nПонимаем, что сейчас может быть непростой период. Предлагаем разбить задолженность {amount} на 3 ежемесячных платежа без штрафов. Подтвердите, пожалуйста, ответом на письмо, и мы пришлём обновлённый график." },
+    ask_reason: { subject: "Счёт {invoices}: нужна ваша помощь",
+      body: "Здравствуйте, {contact}!\n\nСчёт {invoices} на {amount} просрочен на {days} дн. Подскажите, есть ли вопросы к счёту или что-то мешает оплате? Мы поможем решить вопрос." },
+    final_notice: { subject: "Уведомление о приостановке сервиса",
+      body: "Здравствуйте, {contact}!\n\nЗадолженность {company} составляет {amount} и просрочена на {days} дн. Если оплата не поступит в течение 7 дней, доступ к сервису будет приостановлен.\n\nСсылка на оплату: {link}" },
+    call: { subject: "Звонок по задолженности",
+      body: "Скрипт: представиться, уточнить статус оплаты {invoices} ({amount}), выяснить причину задержки, зафиксировать дату обещанной оплаты." },
+  };
+
+  function today(state) { return state.day; }
+
+  function openInvoices(acc, day) {
+    return acc.invoices.filter(function (v) { return v.paid < v.amount && v.due < day; });
+  }
+  function balance(acc, day) {
+    return openInvoices(acc, day).reduce(function (s, v) { return s + v.amount - v.paid; }, 0);
+  }
+  function daysOverdue(acc, day) {
+    const open = openInvoices(acc, day);
+    if (!open.length) return 0;
+    return day - Math.min.apply(null, open.map(function (v) { return v.due; }));
+  }
+
+  function promiseStatus(acc, day) {
+    const p = acc.signals.promise;
+    if (!p) return null;
+    if (balance(acc, day) === 0) return "kept";
+    return p.day >= day ? "active" : "broken";
+  }
+
+  function classify(acc, day) {
+    const s = acc.signals, ev = [];
+    const d = daysOverdue(acc, day);
+    let code;
+    const ps = promiseStatus(acc, day);
+    if (acc.reasonOverride) {
+      code = acc.reasonOverride; ev.push("Причина задана вручную");
+      return { code: code, confidence: 1, evidence: ev };
+    }
+    if (s.dispute) { code = "dispute"; ev.push("Клиент оспаривает счёт: " + s.dispute); }
+    else if (s.cardFailed) { code = "payment_failed"; ev.push("Автосписание не прошло: " + s.cardFailReason); if (acc.onTimeRate > 0.8) ev.push("Раньше платили вовремя (" + Math.round(acc.onTimeRate * 100) + "%)"); }
+    else if (ps === "active") { code = "promise"; ev.push("Клиент обещал оплатить до " + window.fmtDay(s.promise.day)); }
+    else if (s.poRequired) { code = "admin"; ev.push(s.apNote); }
+    else if (s.installmentRequest || s.partialPayments) {
+      code = "hardship";
+      if (s.partialPayments) ev.push("Частичная оплата счёта");
+      if (s.installmentRequest) ev.push("Клиент просил рассрочку");
+    }
+    else if (s.usageDrop >= 40 && s.openTickets >= 2) { code = "churn_risk"; ev.push("Использование упало на " + s.usageDrop + "%"); ev.push(s.openTickets + " открытых обращения в поддержку"); }
+    else if (s.bounced || s.lastReplyDaysAgo > 21) {
+      code = "unresponsive";
+      if (s.bounced) ev.push("Письма на " + acc.contact.email + " не доставляются");
+      if (s.lastReplyDaysAgo > 21) ev.push("Последний ответ " + s.lastReplyDaysAgo + " дн. назад");
+    }
+    else if (acc.onTimeRate >= 0.85 && d <= 20) { code = "forgot"; ev.push("Платят вовремя в " + Math.round(acc.onTimeRate * 100) + "% случаев"); ev.push("Просрочка небольшая: " + d + " дн."); }
+    else { code = "unknown"; ev.push("Нет явных сигналов, нужно связаться с клиентом"); }
+    if (ps === "broken") ev.push("Обещание оплатить до " + window.fmtDay(s.promise.day) + " нарушено");
+    const conf = code === "unknown" ? 0.4 : (ev.length > 1 ? 0.9 : 0.75);
+    return { code: code, confidence: conf, evidence: ev };
+  }
+
+  function recommend(acc, day, reason) {
+    const d = daysOverdue(acc, day);
+    const ps = promiseStatus(acc, day);
+    const s = acc.signals;
+    let code, why;
+    if (ps === "broken" && d < 75) { code = "call"; why = "Обещание нарушено: нужен живой разговор и новая дата"; }
+    else if (d >= 90 && reason.code !== "dispute") { code = "agency"; why = "Просрочка более 90 дней, досудебные меры исчерпаны"; }
+    else if (d >= 60 && reason.code !== "dispute" && reason.code !== "admin") { code = s.suspendNoticeSent ? "suspend" : "final_notice"; why = s.suspendNoticeSent ? "Уведомление уже отправлено, срок истёк" : "Просрочка более 60 дней"; }
+    else switch (reason.code) {
+      case "promise": code = "wait_promise"; why = "Срок обещания ещё не наступил"; break;
+      case "dispute": code = "resolve_dispute"; why = "Пока спор не закрыт, напоминания не сработают"; break;
+      case "payment_failed": code = s.cardLinkSent ? "retry_charge" : "card_update"; why = s.cardLinkSent ? "Ссылка отправлена, пробуем списать снова" : "Технический сбой оплаты, клиент обычно платит сам"; break;
+      case "admin": code = "po_request"; why = "Оплата заблокирована внутренним согласованием клиента"; break;
+      case "hardship": code = "payment_plan"; why = "Рассрочка повышает шанс возврата и сохраняет клиента"; break;
+      case "churn_risk": code = "cs_checkin"; why = "Неоплата связана с недовольством продуктом"; break;
+      case "unresponsive": code = s.bounced ? "find_contact" : "call"; why = s.bounced ? "Email не доставляется" : "Письма остаются без ответа"; break;
+      case "forgot": code = "reminder"; why = "Надёжный плательщик, достаточно напоминания"; break;
+      default: code = d > 30 ? "call" : "ask_reason"; why = "Нужно выяснить причину";
+    }
+    return Object.assign({ code: code, why: why }, ACTIONS[code]);
+  }
+
+  const REASON_WEIGHT = { unresponsive: 1.25, churn_risk: 1.2, hardship: 1.15, unknown: 1.1, dispute: 1.0,
+    admin: 0.85, payment_failed: 0.8, forgot: 0.7, promise: 0.6 };
+
+  function priority(acc, day, reason) {
+    const bal = balance(acc, day);
+    if (!bal) return 0;
+    const d = daysOverdue(acc, day);
+    const amountScore = Math.min(1, Math.log10(bal / 50000) / Math.log10(200)); // 50k..10M
+    const ageScore = Math.min(1, d / 90);
+    let score = (amountScore * 0.5 + ageScore * 0.5) * 100 * (REASON_WEIGHT[reason.code] || 1);
+    if (promiseStatus(acc, day) === "broken") score += 12;
+    return Math.max(1, Math.min(100, Math.round(score)));
+  }
+  function tier(score) {
+    if (score >= 75) return { key: "crit", label: "Критично" };
+    if (score >= 55) return { key: "high", label: "Высокий" };
+    if (score >= 35) return { key: "med", label: "Средний" };
+    return { key: "low", label: "Низкий" };
+  }
+
+  // Автопоследовательности по причине: шаги со смещением в днях от запуска.
+  const PLAYBOOKS = {
+    forgot:         [[0, "reminder"], [3, "reminder"], [7, "call"]],
+    payment_failed: [[0, "card_update"], [2, "retry_charge"], [5, "card_update"], [9, "call"]],
+    admin:          [[0, "po_request"], [4, "call"], [10, "po_request"]],
+    hardship:       [[0, "payment_plan"], [5, "call"], [12, "final_notice"]],
+    churn_risk:     [[0, "cs_checkin"], [3, "ask_reason"], [10, "call"]],
+    unresponsive:   [[0, "ask_reason"], [2, "call"], [6, "final_notice"], [13, "suspend"]],
+    unknown:        [[0, "ask_reason"], [4, "call"], [10, "final_notice"]],
+    dispute:        [[0, "resolve_dispute"], [5, "reminder"]],
+    promise:        [[0, "wait_promise"], [1, "reminder"]],
+  };
+
+  window.Engine = {
+    REASONS: REASONS, ACTIONS: ACTIONS, TEMPLATES: TEMPLATES, PLAYBOOKS: PLAYBOOKS,
+    openInvoices: openInvoices, balance: balance, daysOverdue: daysOverdue,
+    promiseStatus: promiseStatus, classify: classify, recommend: recommend,
+    priority: priority, tier: tier, today: today,
+  };
+})();
+</script>
+<script>
+// Рабочее пространство взыскания: очередь, карточка клиента, задачи, коммуникации, аналитика.
+(function () {
+  const E = window.Engine;
+  const KEY = "genie-collections-v1";
+  const CUR = "₸";
+  const MONTHS = ["янв", "фев", "мар", "апр", "мая", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+
+  let state = load() || fresh();
+  const ui = { tab: "queue", reasons: new Set(), tierF: "all", owner: "all", q: "", open: null, selected: new Set(), draft: null, toast: null };
+
+  function fresh() {
+    const s = window.generateSeed();
+    const d = new Date(); d.setHours(12, 0, 0, 0);
+    s.base = d.toISOString();
+    return s;
+  }
+  function load() {
+    try { const raw = localStorage.getItem(KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* демо работает и без хранилища */ } }
+
+  window.fmtDay = function (day) {
+    const d = new Date(state.base); d.setDate(d.getDate() + day);
+    return d.getDate() + " " + MONTHS[d.getMonth()];
+  };
+  function money(n) { return Math.round(n).toLocaleString("ru-RU").replace(/,/g, " ") + " " + CUR; }
+  function short(n) {
+    if (n >= 1e6) return (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(".", ",") + " млн " + CUR;
+    if (n >= 1e3) return Math.round(n / 1e3) + " тыс " + CUR;
+    return money(n);
+  }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function acc(id) { return state.accounts.find(function (a) { return a.id === id; }); }
+  function nid(p) { state.seq += 1; return p + state.seq; }
+  function rel(day) {
+    const d = day - state.day;
+    if (d === 0) return "сегодня"; if (d === 1) return "завтра"; if (d === -1) return "вчера";
+    return d > 0 ? "через " + d + " дн." : d * -1 + " дн. назад";
+  }
+
+  // ---------- Вычисления по клиенту ----------
+  function view(a) {
+    const day = state.day;
+    const reason = E.classify(a, day);
+    const bal = E.balance(a, day);
+    const score = E.priority(a, day, reason);
+    return { a: a, reason: reason, bal: bal, days: E.daysOverdue(a, day), score: score, tier: E.tier(score),
+      reco: E.recommend(a, day, reason), open: E.openInvoices(a, day), promise: E.promiseStatus(a, day) };
+  }
+  function overdueViews() {
+    return state.accounts.map(view).filter(function (v) { return v.bal > 0; }).sort(function (x, y) { return y.score - x.score; });
+  }
+
+  // ---------- Шаблоны ----------
+  function fill(tpl, v) {
+    const a = v.a;
+    const map = {
+      contact: a.contact.name.split(" ")[0], company: a.name, amount: money(v.bal), days: v.days,
+      invoices: v.open.map(function (i) { return i.number; }).join(", ") || "—",
+      link: "pay.geniemap.kz/" + a.id, cardReason: (a.signals.cardFailReason || "").toLowerCase(),
+    };
+    return tpl.replace(/\{(\w+)\}/g, function (_, k) { return map[k] != null ? map[k] : ""; });
+  }
+  function draftFor(v, code) {
+    const t = E.TEMPLATES[code] || E.TEMPLATES[{ suspend: "final_notice", retry_charge: "card_update" }[code]];
+    return t ? { subject: fill(t.subject, v), body: fill(t.body, v) } : { subject: E.ACTIONS[code].label, body: "" };
+  }
+
+  // ---------- Действия ----------
+  function logComm(a, o) {
+    state.comms.push(Object.assign({ id: nid("c"), accountId: a.id, day: state.day }, o));
+  }
+  function addTask(a, title, inDays) {
+    state.tasks.push({ id: nid("t"), accountId: a.id, due: state.day + inDays, title: title, done: false });
+  }
+  function recordPayment(a, amount, note) {
+    let left = amount;
+    a.invoices.slice().sort(function (x, y) { return x.due - y.due; }).forEach(function (inv) {
+      if (left <= 0 || inv.paid >= inv.amount) return;
+      const pay = Math.min(left, inv.amount - inv.paid);
+      inv.paid += pay; left -= pay;
+      if (inv.paid >= inv.amount) inv.paidOn = state.day;
+    });
+    const paid = amount - left;
+    state.recoveredLog.push({ day: state.day, accountId: a.id, amount: paid, reason: E.classify(a, state.day).code });
+    a.payments.push({ day: state.day, amount: paid });
+    logComm(a, { channel: "payment", subject: "Поступила оплата " + money(paid), body: note || "", status: "Оплата", inbound: true });
+    if (E.balance(a, state.day) === 0) {
+      if (a.automation) a.automation.stopped = "Погашено";
+      a.signals.cardFailed = false; a.signals.partialPayments = false; a.signals.installmentRequest = false;
+      state.tasks.forEach(function (t) { if (t.accountId === a.id && !t.done) t.done = true; });
+    }
+    return paid;
+  }
+
+  // Выполнить действие: auto=true — из автопоследовательности
+  function execute(a, code, draft, auto) {
+    const s = a.signals;
+    const act = E.ACTIONS[code];
+    const v = view(a);
+    if (!draft) draft = draftFor(v, code);
+    const base = { auto: !!auto, subject: draft.subject, body: draft.body, action: code };
+    switch (code) {
+      case "reminder": case "po_request": case "payment_plan": case "ask_reason":
+        if (s.bounced && !auto) toast("Внимание: адрес " + a.contact.email + " ранее не принимал письма");
+        logComm(a, Object.assign(base, { channel: "email", status: s.bounced ? "Не доставлено" : "Отправлено" }));
+        if (code === "payment_plan") s.planOffered = true;
+        if (code === "po_request") s.poRequested = true;
+        break;
+      case "card_update":
+        logComm(a, Object.assign(base, { channel: "email", status: "Отправлено" })); s.cardLinkSent = true; break;
+      case "final_notice":
+        logComm(a, Object.assign(base, { channel: "email", status: s.bounced ? "Не доставлено" : "Отправлено" })); s.suspendNoticeSent = true; break;
+      case "retry_charge": {
+        const ok = s.cardLinkSent && rand(a, 7) < 0.6;
+        logComm(a, Object.assign(base, { channel: "system", subject: "Повторное списание", body: ok ? "Списание прошло успешно." : "Банк отклонил списание.", status: ok ? "Успешно" : "Отказ" }));
+        if (ok) { s.cardFailed = false; recordPayment(a, v.bal, "Автосписание с обновлённой карты"); }
+        break;
+      }
+      case "call":
+        if (auto) { addTask(a, "Позвонить: " + a.contact.name + ", " + a.contact.phone, 0); logComm(a, Object.assign(base, { channel: "task", subject: "Создана задача на звонок", status: "Задача" })); }
+        else logComm(a, Object.assign(base, { channel: "call", subject: "Звонок " + a.contact.name, status: "Звонок выполнен" }));
+        s.contacted = state.day;
+        break;
+      case "suspend":
+        s.suspended = true; logComm(a, Object.assign(base, { channel: "system", subject: "Сервис приостановлен", body: "Доступ клиента ограничен до погашения задолженности.", status: "Приостановлено" })); break;
+      case "agency":
+        s.agency = true; addTask(a, "Подготовить пакет документов для коллекторского агентства", 2);
+        logComm(a, Object.assign(base, { channel: "system", subject: "Передано во внешнее взыскание", body: "", status: "Эскалация" })); break;
+      case "resolve_dispute": addTask(a, "Разобрать спор: " + (s.dispute || "проверить счёт"), 1);
+        logComm(a, Object.assign(base, { channel: "task", subject: "Спор передан аккаунт-менеджеру " + a.owner, body: s.dispute || "", status: "Задача" })); break;
+      case "cs_checkin": addTask(a, "Customer Success: созвон о проблемах с продуктом", 1);
+        logComm(a, Object.assign(base, { channel: "task", subject: "Подключён Customer Success", body: "Открытых обращений: " + s.openTickets, status: "Задача" })); break;
+      case "find_contact": addTask(a, "Найти актуальный контакт бухгалтерии / ЛПР", 1);
+        logComm(a, Object.assign(base, { channel: "task", subject: "Поиск нового контакта", status: "Задача" })); break;
+      case "wait_promise":
+        if (!auto) toast("Ждём оплату до " + fmtDay(s.promise.day) + ". Напоминание придёт автоматически.");
+        return;
+    }
+    if (code !== "call" && code !== "wait_promise") s.contacted = state.day;
+    if (!auto && E.balance(a, state.day) > 0 && act.channel !== "task") addTask(a, "Проверить результат: " + act.label.toLowerCase(), 3);
+  }
+
+  function enroll(a) {
+    const r = E.classify(a, state.day).code;
+    a.automation = { playbook: r, start: state.day, done: [], stopped: null };
+    runAutomation(a);
+  }
+  function runAutomation(a) {
+    const au = a.automation;
+    if (!au || au.stopped) return;
+    if (E.balance(a, state.day) === 0) { au.stopped = "Погашено"; return; }
+    if (a.signals.dispute && au.playbook !== "dispute") { au.stopped = "Пауза: открыт спор"; return; }
+    (E.PLAYBOOKS[au.playbook] || []).forEach(function (st, i) {
+      if (au.done.indexOf(i) >= 0 || au.start + st[0] > state.day) return;
+      au.done.push(i);
+      if (E.balance(a, state.day) > 0) execute(a, st[1], null, true);
+    });
+  }
+
+  // детерминированная «случайность» для симуляции ответа клиента
+  function rand(a, salt) {
+    let h = 2166136261;
+    const str = a.id + ":" + state.day + ":" + salt;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return ((h >>> 0) % 10000) / 10000;
+  }
+
+  function nextDay() {
+    state.day += 1;
+    let paidCount = 0, paidSum = 0, autoSent = 0;
+    const before = state.comms.length;
+    state.accounts.forEach(function (a) { runAutomation(a); });
+    autoSent = state.comms.length - before;
+    // ответы клиентов
+    state.accounts.forEach(function (a) {
+      const bal = E.balance(a, state.day);
+      if (!bal) return;
+      const s = a.signals, r = E.classify(a, state.day).code;
+      const recent = s.contacted != null && state.day - s.contacted <= 4;
+      let p = 0.02, part = 1;
+      if (s.promise && s.promise.day === state.day && r === "promise") p = 0.8;
+      else if (recent) {
+        p = { forgot: 0.4, payment_failed: s.cardLinkSent ? 0.35 : 0.05, admin: s.poRequested ? 0.22 : 0.05, hardship: s.planOffered ? 0.35 : 0.06,
+          churn_risk: 0.1, unresponsive: s.bounced ? 0.02 : 0.1, unknown: 0.18, dispute: 0.02, promise: 0.15 }[r] || 0.1;
+        if (r === "hardship" && s.planOffered) part = 1 / 3;
+        if (s.suspended) p += 0.25;
+      }
+      if (rand(a, 1) < p) {
+        const amt = part < 1 ? Math.min(bal, Math.round(bal * part / 1000) * 1000) : bal;
+        paidSum += recordPayment(a, amt, part < 1 ? "Платёж по графику рассрочки" : "Оплата по счёту");
+        paidCount += 1;
+      } else if (recent && r === "unknown" && rand(a, 2) < 0.3) {
+        // клиент ответил и назвал причину
+        s.promise = { day: state.day + 5, madeOn: state.day };
+        logComm(a, { channel: "email", inbound: true, subject: "Re: нужна ваша помощь", body: "Оплатим до " + fmtDay(state.day + 5) + ", задержка была из-за смены бухгалтера.", status: "Обещание оплаты" });
+      }
+    });
+    save(); render();
+    toast(fmtDay(state.day) + ": автоматизация отправила " + autoSent + " сообщ., поступило оплат: " + paidCount + (paidSum ? " на " + short(paidSum) : ""));
+  }
+
+  // ---------- Рендер ----------
+  const root = document.getElementById("app");
+
+  function reasonPill(code) {
+    const r = E.REASONS[code];
+    return '<span class="pill tone-' + r.tone + '">' + esc(r.label) + "</span>";
+  }
+  function agingBlocks(days, tierKey) {
+    const n = days > 90 ? 4 : days > 60 ? 3 : days > 30 ? 2 : 1;
+    let h = '<span class="aging sev-' + tierKey + '" title="Корзина просрочки">';
+    for (let i = 1; i <= 4; i++) h += '<i class="' + (i <= n ? "on" : "") + '"></i>';
+    return h + "</span>";
+  }
+
+  function kpis(views) {
+    const total = views.reduce(function (s, v) { return s + v.bal; }, 0);
+    const recovered = state.recoveredLog.reduce(function (s, r) { return s + r.amount; }, 0);
+    const start = state.startTotal || (state.startTotal = total);
+    const promises = views.filter(function (v) { return v.promise === "active"; }).length;
+    const tasksDue = state.tasks.filter(function (t) { return !t.done && t.due <= state.day; }).length;
+    const crit = views.filter(function (v) { return v.tier.key === "crit"; }).length;
+    return '<section class="kpis" aria-label="Сводка">' +
+      k("Просроченная задолженность", short(total), views.length + " клиентов") +
+      k("Критичный приоритет", String(crit), "требуют внимания сегодня") +
+      k("Возвращено", short(recovered), Math.round(recovered / Math.max(1, start) * 100) + "% от стартового долга", recovered > 0) +
+      k("Активные обещания", String(promises), "клиент назвал дату оплаты") +
+      k("Задачи на сегодня", String(tasksDue), tasksDue ? "включая просроченные" : "всё сделано") +
+      "</section>";
+    function k(l, v, s, good) { return '<div class="kpi"><span class="label">' + l + '</span><span class="value' + (good ? " good" : "") + '">' + v + '</span><span class="sub">' + s + "</span></div>"; }
+  }
+
+  function queue(views) {
+    const reasonCounts = {};
+    views.forEach(function (v) { reasonCounts[v.reason.code] = (reasonCounts[v.reason.code] || 0) + 1; });
+    const list = views.filter(function (v) {
+      if (ui.reasons.size && !ui.reasons.has(v.reason.code)) return false;
+      if (ui.tierF !== "all" && v.tier.key !== ui.tierF) return false;
+      if (ui.owner !== "all" && v.a.owner !== ui.owner) return false;
+      if (ui.q && (v.a.name + " " + v.a.contact.name).toLowerCase().indexOf(ui.q.toLowerCase()) < 0) return false;
+      return true;
+    });
+    const owners = Array.from(new Set(state.accounts.map(function (a) { return a.owner; })));
+    let h = '<div class="filters">' +
+      '<input type="search" id="q" placeholder="Компания или контакт" value="' + esc(ui.q) + '" aria-label="Поиск">' +
+      '<select id="tierF" aria-label="Приоритет"><option value="all">Любой приоритет</option>' +
+      [["crit", "Критично"], ["high", "Высокий"], ["med", "Средний"], ["low", "Низкий"]].map(function (t) { return '<option value="' + t[0] + '"' + (ui.tierF === t[0] ? " selected" : "") + ">" + t[1] + "</option>"; }).join("") + "</select>" +
+      '<select id="ownerF" aria-label="Ответственный"><option value="all">Все ответственные</option>' +
+      owners.map(function (o) { return "<option" + (ui.owner === o ? " selected" : "") + ">" + esc(o) + "</option>"; }).join("") + "</select></div>" +
+      '<div class="chips" style="margin-bottom:12px">' +
+      Object.keys(E.REASONS).filter(function (c) { return reasonCounts[c]; }).map(function (c) {
+        return '<button class="chip" data-reason="' + c + '" aria-pressed="' + ui.reasons.has(c) + '">' + E.REASONS[c].label + ' <span class="num muted">' + reasonCounts[c] + "</span></button>";
+      }).join("") + "</div>";
+    if (ui.selected.size) {
+      h += '<div class="bulk"><b>Выбрано: ' + ui.selected.size + '</b><button class="btn primary small" data-act="bulk-auto">Запустить автосценарий</button><button class="btn small" data-act="bulk-clear">Снять выбор</button><span class="note">Сценарий подбирается по причине неоплаты каждого клиента</span></div>';
+    }
+    if (!list.length) return h + '<div class="empty">Нет клиентов под эти фильтры.</div>';
+    h += '<div class="table-wrap"><table><thead><tr><th style="width:28px"></th><th>Приоритет</th><th>Клиент</th><th class="r">Просрочено</th><th>Дней</th><th>Причина</th><th>Следующее действие</th><th>Автоматизация</th></tr></thead><tbody>';
+    list.forEach(function (v) {
+      const au = v.a.automation;
+      h += '<tr class="row" data-open="' + v.a.id + '">' +
+        '<td><input type="checkbox" data-sel="' + v.a.id + '" aria-label="Выбрать ' + esc(v.a.name) + '"' + (ui.selected.has(v.a.id) ? " checked" : "") + "></td>" +
+        '<td><div class="prio sev-' + v.tier.key + '"><span class="score">' + v.score + '</span><span class="bar"><i style="width:' + v.score + '%"></i></span></div></td>' +
+        '<td class="co">' + esc(v.a.name) + "<small>" + esc(v.a.plan) + " · " + esc(v.a.owner) + "</small></td>" +
+        '<td class="r num">' + money(v.bal) + '<div class="muted" style="font-size:11.5px">' + v.open.length + " сч.</div></td>" +
+        '<td><div class="inline"><span class="num">' + v.days + "</span>" + agingBlocks(v.days, v.tier.key) + "</div></td>" +
+        "<td>" + reasonPill(v.reason.code) + (v.promise === "broken" ? ' <span class="pill tone-red">обещание нарушено</span>' : "") + "</td>" +
+        '<td class="action-cell">' + esc(v.reco.label) + "</td>" +
+        "<td>" + (au ? (au.stopped ? '<span class="muted" style="font-size:12px">' + esc(au.stopped) + "</span>" : '<span class="auto">● шаг ' + au.done.length + " из " + E.PLAYBOOKS[au.playbook].length + "</span>") : '<span class="muted" style="font-size:12px">выкл.</span>') + "</td></tr>";
+    });
+    return h + "</tbody></table></div>";
+  }
+
+  function tasksView() {
+    const open = state.tasks.filter(function (t) { return !t.done; }).sort(function (x, y) { return x.due - y.due; });
+    const done = state.tasks.filter(function (t) { return t.done; }).slice(-8).reverse();
+    function item(t) {
+      const a = acc(t.accountId);
+      return '<div class="item"><input type="checkbox" data-task="' + t.id + '"' + (t.done ? " checked" : "") + ' aria-label="Выполнено">' +
+        '<div class="main"><b' + (t.done ? ' class="muted"' : "") + ">" + esc(t.title) + '</b><p><button class="link" data-open="' + a.id + '">' + esc(a.name) + "</button> · " + esc(a.owner) + "</p></div>" +
+        '<div class="side ' + (!t.done && t.due < state.day ? "overdue-t" : "") + '">' + fmtDay(t.due) + "<br>" + rel(t.due) + "</div></div>";
+    }
+    return '<div class="section-title">Открытые · ' + open.length + "</div>" +
+      (open.length ? '<div class="list">' + open.map(item).join("") + "</div>" : '<div class="list"><div class="empty">Все задачи выполнены.</div></div>') +
+      (done.length ? '<div class="section-title">Недавно выполненные</div><div class="list">' + done.map(item).join("") + "</div>" : "");
+  }
+
+  const CH = { email: "Email", call: "Звонок", system: "Система", task: "Задача", payment: "Оплата" };
+  function commsView() {
+    const list = state.comms.slice().sort(function (x, y) { return y.day - x.day; }).slice(0, 80);
+    if (!list.length) return '<div class="list"><div class="empty">Пока нет коммуникаций.</div></div>';
+    return '<p class="note">Сообщения в демо не отправляются наружу: они только записываются в журнал, как если бы ушли клиенту.</p><div class="list">' + list.map(function (c) {
+      const a = acc(c.accountId);
+      return '<div class="item"><div class="main"><b>' + esc(c.subject) + "</b>" + (c.auto ? '<span class="tag auto">авто</span>' : "") + (c.inbound ? '<span class="tag">входящее</span>' : "") +
+        '<p><button class="link" data-open="' + a.id + '">' + esc(a.name) + "</button> · " + CH[c.channel] + " · " + esc(c.status) + "</p></div>" +
+        '<div class="side">' + fmtDay(c.day) + "</div></div>";
+    }).join("") + "</div>";
+  }
+
+  function analytics(views) {
+    // корзины просрочки
+    const buckets = [["1–30", 0, 30], ["31–60", 31, 60], ["61–90", 61, 90], ["90+", 91, 1e9]].map(function (b) {
+      return { label: b[0], sum: views.filter(function (v) { return v.days >= b[1] && v.days <= b[2]; }).reduce(function (s, v) { return s + v.bal; }, 0) };
+    });
+    const maxB = Math.max.apply(null, buckets.map(function (b) { return b.sum; }).concat([1]));
+    const W = 460, H = 220, pl = 10, pb = 28, pt = 22, bw = 70, gap = (W - pl * 2 - bw * 4) / 3;
+    let svg = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="Задолженность по сроку просрочки">';
+    [0.25, 0.5, 0.75, 1].forEach(function (f) { const y = H - pb - (H - pb - pt) * f; svg += '<line class="grid" x1="0" x2="' + W + '" y1="' + y + '" y2="' + y + '"/>'; });
+    const sev = ["var(--med)", "var(--high)", "var(--crit)", "var(--crit)"];
+    buckets.forEach(function (b, i) {
+      const h = (H - pb - pt) * b.sum / maxB, x = pl + i * (bw + gap), y = H - pb - h;
+      svg += '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + Math.max(1, h) + '" rx="4" fill="' + sev[i] + '" opacity="' + (i === 3 ? 1 : 0.85) + '"/>' +
+        '<text class="v" x="' + (x + bw / 2) + '" y="' + (y - 6) + '" text-anchor="middle">' + short(b.sum) + "</text>" +
+        '<text x="' + (x + bw / 2) + '" y="' + (H - 8) + '" text-anchor="middle">' + b.label + " дн.</text>";
+    });
+    svg += "</svg>";
+
+    // по причинам
+    const byReason = {};
+    views.forEach(function (v) { byReason[v.reason.code] = (byReason[v.reason.code] || 0) + v.bal; });
+    const maxR = Math.max.apply(null, Object.values(byReason).concat([1]));
+    const reasonBars = Object.keys(byReason).sort(function (x, y) { return byReason[y] - byReason[x]; }).map(function (c) {
+      return '<div class="hbar tone-' + E.REASONS[c].tone + '"><span>' + E.REASONS[c].label + '</span><span class="track"><i style="width:' + (byReason[c] / maxR * 100) + '%"></i></span><span class="num">' + short(byReason[c]) + "</span></div>";
+    }).join("");
+
+    // возвраты по дням (накопительно)
+    const days = Math.max(state.day, 7);
+    let cum = 0; const pts = [];
+    for (let d = 0; d <= days; d++) {
+      cum += state.recoveredLog.filter(function (r) { return r.day === d; }).reduce(function (s, r) { return s + r.amount; }, 0);
+      pts.push(cum);
+    }
+    const maxC = Math.max(cum, 1);
+    const LW = 460, LH = 200, lp = 12, lb = 24, lt = 24;
+    const xs = function (d) { return lp + (LW - lp * 2) * d / days; };
+    const ys = function (v) { return LH - lb - (LH - lb - lt) * v / maxC; };
+    const visible = pts.slice(0, state.day + 1);
+    const line = visible.map(function (v, d) { return (d ? "L" : "M") + xs(d).toFixed(1) + " " + ys(v).toFixed(1); }).join(" ");
+    let lsvg = '<svg viewBox="0 0 ' + LW + " " + LH + '" role="img" aria-label="Возвращено накопительно">';
+    [0.5, 1].forEach(function (f) { lsvg += '<line class="grid" x1="0" x2="' + LW + '" y1="' + ys(maxC * f) + '" y2="' + ys(maxC * f) + '"/>'; });
+    lsvg += '<line class="grid" x1="0" x2="' + LW + '" y1="' + ys(0) + '" y2="' + ys(0) + '"/>';
+    if (visible.length > 1) lsvg += '<path d="' + line + " L" + xs(state.day) + " " + ys(0) + " L" + xs(0) + " " + ys(0) + ' Z" fill="var(--accent)" opacity=".12"/><path d="' + line + '" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>';
+    lsvg += '<circle cx="' + xs(state.day) + '" cy="' + ys(cum) + '" r="4.5" fill="var(--accent)"/>' +
+      '<text class="v" x="' + Math.min(xs(state.day) + 8, LW - 90) + '" y="' + (ys(cum) - 8) + '">' + short(cum) + "</text>" +
+      '<text x="' + lp + '" y="' + (LH - 6) + '">' + fmtDay(0) + "</text>" +
+      '<text x="' + (LW - lp) + '" y="' + (LH - 6) + '" text-anchor="end">' + fmtDay(days) + "</text></svg>";
+
+    // эффективность по причинам
+    const recByReason = {};
+    state.recoveredLog.forEach(function (r) { recByReason[r.reason] = (recByReason[r.reason] || 0) + r.amount; });
+
+    return '<div class="grid2">' +
+      '<div class="panel chart"><h3>Задолженность по сроку просрочки</h3>' + svg + "</div>" +
+      '<div class="panel"><h3>Задолженность по причинам</h3><div class="hbars">' + reasonBars + "</div></div>" +
+      '<div class="panel chart"><h3>Возвращено накопительно</h3>' + lsvg + (state.day === 0 ? '<p class="note">Нажмите «Следующий день», чтобы увидеть, как сценарии возвращают деньги.</p>' : "") + "</div>" +
+      '<div class="panel"><h3>Что сработало</h3>' + (Object.keys(recByReason).length ? '<div class="hbars">' + Object.keys(recByReason).map(function (c) {
+        const m = Math.max.apply(null, Object.values(recByReason));
+        return '<div class="hbar tone-' + E.REASONS[c].tone + '"><span>' + E.REASONS[c].label + '</span><span class="track"><i style="width:' + (recByReason[c] / m * 100) + '%"></i></span><span class="num">' + short(recByReason[c]) + "</span></div>";
+      }).join("") + "</div>" : '<p class="note">Пока нет поступлений. Здесь появится разбивка возвращённых денег по причине неоплаты.</p>') + "</div></div>";
+  }
+
+  function playbooksView() {
+    return '<p class="note">Сценарий выбирается по причине неоплаты. Каждый шаг выполняется автоматически в свой день; звонки превращаются в задачи для менеджера. Сценарий останавливается при оплате или открытом споре.</p><div class="pb">' +
+      Object.keys(E.PLAYBOOKS).map(function (c) {
+        return '<div class="panel"><h3>' + reasonPill(c) + "</h3><ul class=\"steps\">" + E.PLAYBOOKS[c].map(function (st) {
+          return '<li><span class="d">день ' + st[0] + "</span>" + esc(E.ACTIONS[st[1]].label) + "</li>";
+        }).join("") + "</ul></div>";
+      }).join("") + "</div>";
+  }
+
+  function drawer() {
+    const a = acc(ui.open);
+    if (!a) return "";
+    const v = view(a), s = a.signals;
+    if (!ui.draft || ui.draft.id !== a.id || ui.draft.code !== v.reco.code) {
+      ui.draft = Object.assign({ id: a.id, code: v.reco.code }, draftFor(v, v.reco.code));
+    }
+    const hasMsg = ["email"].indexOf(v.reco.channel) >= 0 || v.reco.code === "call";
+    let h = '<div class="scrim" data-act="close"></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="' + esc(a.name) + '">' +
+      '<header><div style="flex:1;min-width:0"><h2>' + esc(a.name) + '</h2><div class="meta"><span>' + esc(a.industry) + " · " + esc(a.plan) + " · MRR " + short(a.mrr) + "</span><span>Ответственный: " + esc(a.owner) + "</span>" +
+      "<span>" + esc(a.contact.name) + ", " + esc(a.contact.email) + ", " + esc(a.contact.phone) + "</span></div></div>" +
+      '<button class="btn ghost" data-act="close" aria-label="Закрыть">✕</button></header><div class="body">';
+    if (!v.bal) {
+      h += '<div class="paid-banner">Задолженность погашена. Клиент выйдет из очереди.</div>';
+    } else {
+      h += '<div class="facts"><div class="fact"><div class="label">Просрочено</div><div class="value">' + money(v.bal) + '</div></div>' +
+        '<div class="fact"><div class="label">Дней просрочки</div><div class="value">' + v.days + '</div></div>' +
+        '<div class="fact sev-' + v.tier.key + '"><div class="label">Приоритет</div><div class="value"><span class="sevdot"></span> ' + v.score + " · " + v.tier.label + "</div></div></div>";
+
+      h += '<section class="panel reco"><h3>Рекомендованное действие <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400">' + esc(CH[v.reco.channel] || "") + '</span></h3>' +
+        '<div class="reco-title">' + esc(v.reco.label) + '</div><div class="muted">' + esc(v.reco.why) + "</div>";
+      if (hasMsg) {
+        h += '<div class="field"><label for="d-subj">' + (v.reco.code === "call" ? "Тема звонка" : "Тема письма") + '</label><input id="d-subj" value="' + esc(ui.draft.subject) + '"></div>' +
+          '<div class="field"><label for="d-body">' + (v.reco.code === "call" ? "Скрипт" : "Текст") + '</label><textarea id="d-body">' + esc(ui.draft.body) + "</textarea></div>";
+      }
+      h += '<div class="row-actions"><button class="btn primary" data-act="exec">' + (v.reco.code === "call" ? "Отметить звонок" : v.reco.channel === "email" ? "Отправить" : v.reco.channel === "none" ? "Понятно" : "Выполнить") + "</button>" +
+        '<select id="alt" aria-label="Другое действие"><option value="">Другое действие…</option>' + Object.keys(E.ACTIONS).filter(function (c) { return c !== v.reco.code && c !== "wait_promise"; }).map(function (c) { return '<option value="' + c + '">' + E.ACTIONS[c].label + "</option>"; }).join("") + "</select></div>" +
+        (s.bounced && hasMsg && v.reco.code !== "call" ? '<p class="note">Адрес клиента не принимает письма; сообщение будет записано как недоставленное.</p>' : "") + "</section>";
+
+      // причина
+      h += '<section class="panel"><h3>Причина неоплаты ' + reasonPill(v.reason.code) + '</h3><ul class="evidence">' + v.reason.evidence.map(function (e) { return "<li>" + esc(e) + "</li>"; }).join("") + "</ul>" +
+        '<div class="inline"><span class="note">Уверенность ' + Math.round(v.reason.confidence * 100) + '%.</span><label class="note" for="ovr">Исправить причину:</label><select id="ovr"><option value="">авто</option>' +
+        Object.keys(E.REASONS).map(function (c) { return '<option value="' + c + '"' + (a.reasonOverride === c ? " selected" : "") + ">" + E.REASONS[c].label + "</option>"; }).join("") + "</select>" +
+        (s.dispute ? '<button class="btn small" data-act="resolve">Спор урегулирован</button>' : "") + "</div></section>";
+
+      // автоматизация
+      const au = a.automation;
+      h += '<section class="panel"><h3>Автосценарий ' + (au && !au.stopped ? '<span class="auto">● активен</span>' : "") + "</h3>";
+      if (au) {
+        h += '<ul class="steps">' + E.PLAYBOOKS[au.playbook].map(function (st, i) {
+          const done = au.done.indexOf(i) >= 0;
+          return '<li><span class="d">' + fmtDay(au.start + st[0]) + '</span><span class="' + (done ? "done" : "") + '">' + esc(E.ACTIONS[st[1]].label) + "</span>" + (done ? '<span class="tag auto">выполнено</span>' : "") + "</li>";
+        }).join("") + "</ul>" + (au.stopped ? '<p class="note">Остановлен: ' + esc(au.stopped) + '</p><div><button class="btn small" data-act="enroll">Запустить заново</button></div>' : '<div><button class="btn small" data-act="stop">Остановить</button></div>');
+      } else {
+        h += '<p class="note">Сценарий для причины «' + E.REASONS[v.reason.code].label + "»: " + E.PLAYBOOKS[v.reason.code].map(function (st) { return "день " + st[0] + ": " + E.ACTIONS[st[1]].label.toLowerCase(); }).join("; ") + '.</p><div><button class="btn" data-act="enroll">Запустить автосценарий</button></div>';
+      }
+      h += "</section>";
+
+      // обещание и оплата
+      h += '<section class="panel"><h3>Обещание и оплата</h3>' +
+        (s.promise ? '<div>Обещание оплатить до <b>' + fmtDay(s.promise.day) + "</b> · " + { active: '<span class="pill tone-teal">ожидаем</span>', broken: '<span class="pill tone-red">нарушено</span>', kept: '<span class="pill tone-green">выполнено</span>' }[v.promise] + "</div>" : "") +
+        '<div class="inline"><label class="note" for="pdays">Клиент обещал оплатить через</label><select id="pdays">' + [1, 3, 5, 7, 14].map(function (d) { return '<option value="' + d + '">' + d + " дн.</option>"; }).join("") + '</select><button class="btn small" data-act="promise">Записать обещание</button></div>' +
+        '<div class="inline"><label class="note" for="pay">Поступила оплата, ' + CUR + '</label><input id="pay" class="num" inputmode="numeric" value="' + v.bal + '" style="width:140px"><button class="btn small" data-act="pay">Записать оплату</button></div></section>';
+    }
+
+    // счета
+    h += '<section class="panel"><h3>Счета</h3><div style="overflow-x:auto"><table class="mini"><thead><tr><th>Счёт</th><th>Срок</th><th class="r">Сумма</th><th class="r">Остаток</th></tr></thead><tbody>' +
+      a.invoices.slice().reverse().map(function (i) {
+        const left = i.amount - i.paid, late = left > 0 && i.due < state.day;
+        return "<tr><td class=\"num\">" + i.number + "</td><td>" + fmtDay(i.due) + (late ? ' <span class="overdue-t" style="font-size:12px">+' + (state.day - i.due) + " дн.</span>" : "") + '</td><td class="r num">' + money(i.amount) + '</td><td class="r num">' + (left ? money(left) : '<span class="muted">оплачен</span>') + "</td></tr>";
+      }).join("") + "</tbody></table></div></section>";
+
+    // лента
+    const tl = state.comms.filter(function (c) { return c.accountId === a.id; }).sort(function (x, y) { return y.day - x.day; });
+    h += '<section class="panel"><h3>История</h3>' + (tl.length ? '<ul class="timeline">' + tl.map(function (c) {
+      return '<li><span class="when">' + fmtDay(c.day) + '</span><div class="what"><b>' + esc(c.subject) + "</b>" + (c.auto ? '<span class="tag auto">авто</span>' : "") + '<span class="tag">' + (CH[c.channel] || "") + " · " + esc(c.status) + "</span>" + (c.body ? "<p>" + esc(c.body) + "</p>" : "") + "</div></li>";
+    }).join("") + "</ul>" : '<p class="note">Контактов по этому долгу ещё не было.</p>') + "</section>";
+    return h + "</div></aside>";
+  }
+
+  function render() {
+    const views = overdueViews();
+    const openTasks = state.tasks.filter(function (t) { return !t.done; }).length;
+    const tabs = [["queue", "Очередь", views.length], ["tasks", "Задачи", openTasks], ["comms", "Коммуникации", state.comms.length], ["analytics", "Аналитика"], ["playbooks", "Сценарии"]];
+    let body;
+    if (ui.tab === "queue") body = queue(views);
+    else if (ui.tab === "tasks") body = tasksView();
+    else if (ui.tab === "comms") body = commsView();
+    else if (ui.tab === "analytics") body = analytics(views);
+    else body = playbooksView();
+    const scroll = document.querySelector(".drawer .body");
+    const st = scroll ? scroll.scrollTop : 0;
+    const focusId = document.activeElement && document.activeElement.id;
+    root.innerHTML =
+      '<header class="top"><div class="wrap"><div class="brand"><b>Genie Map</b><span>Collections</span></div>' +
+      '<div class="clock"><span class="date">Сегодня: <b>' + fmtDay(state.day) + "</b>" + (state.day ? ' <span class="muted">(день ' + state.day + " демо)</span>" : "") + "</span>" +
+      '<button class="btn primary" data-act="next">Следующий день ▸</button><button class="btn ghost" data-act="reset">Сбросить демо</button></div></div></header>' +
+      '<main class="wrap">' + kpis(views) +
+      '<nav class="tabs" role="tablist">' + tabs.map(function (t) { return '<button class="tab" role="tab" data-tab="' + t[0] + '" aria-selected="' + (ui.tab === t[0]) + '">' + t[1] + (t[2] != null ? '<span class="count">' + t[2] + "</span>" : "") + "</button>"; }).join("") + "</nav>" +
+      body + "</main>" +
+      '<footer class="wrap note">Демо-данные. Письма и звонки не уходят наружу: они записываются в журнал коммуникаций. Причины и действия определяются правилами по сигналам из биллинга, CRM и поддержки.</footer>' +
+      (ui.open ? drawer() : "") +
+      (ui.toast ? '<div class="toast" role="status">' + esc(ui.toast) + "</div>" : "");
+    const ns = document.querySelector(".drawer .body");
+    if (ns) ns.scrollTop = st;
+    if (focusId) { const f = document.getElementById(focusId); if (f) { f.focus(); if (f.type === "search") f.setSelectionRange(f.value.length, f.value.length); } }
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    ui.toast = msg; clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { ui.toast = null; render(); }, 3800);
+  }
+  function commit(msg) { save(); if (msg) toast(msg); render(); }
+
+  // ---------- События ----------
+  root.addEventListener("click", function (e) {
+    const t = e.target;
+    if (t.matches("input[type=checkbox][data-sel]")) {
+      e.stopPropagation();
+      const id = t.getAttribute("data-sel");
+      if (t.checked) ui.selected.add(id); else ui.selected.delete(id);
+      render(); return;
+    }
+    if (t.matches("input[type=checkbox][data-task]")) {
+      const task = state.tasks.find(function (x) { return x.id === t.getAttribute("data-task"); });
+      task.done = t.checked; commit(task.done ? "Задача выполнена" : null); return;
+    }
+    const tab = t.closest("[data-tab]");
+    if (tab) { ui.tab = tab.getAttribute("data-tab"); render(); return; }
+    const chip = t.closest("[data-reason]");
+    if (chip) { const c = chip.getAttribute("data-reason"); if (ui.reasons.has(c)) ui.reasons.delete(c); else ui.reasons.add(c); render(); return; }
+    const actEl = t.closest("[data-act]");
+    if (actEl) { act(actEl.getAttribute("data-act")); return; }
+    const open = t.closest("[data-open]");
+    if (open) { ui.open = open.getAttribute("data-open"); ui.draft = null; render(); }
+  });
+  root.addEventListener("input", function (e) {
+    const t = e.target;
+    if (t.id === "q") { ui.q = t.value; render(); }
+    if (t.id === "d-subj" && ui.draft) ui.draft.subject = t.value;
+    if (t.id === "d-body" && ui.draft) ui.draft.body = t.value;
+  });
+  root.addEventListener("change", function (e) {
+    const t = e.target;
+    if (t.id === "tierF") { ui.tierF = t.value; render(); }
+    if (t.id === "ownerF") { ui.owner = t.value; render(); }
+    if (t.id === "ovr") { const a = acc(ui.open); a.reasonOverride = t.value || null; ui.draft = null; commit("Причина обновлена, рекомендация пересчитана"); }
+    if (t.id === "alt" && t.value) {
+      const a = acc(ui.open), code = t.value;
+      execute(a, code, draftFor(view(a), code), false);
+      commit("Выполнено: " + E.ACTIONS[code].label.toLowerCase());
+    }
+  });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && ui.open) { ui.open = null; render(); } });
+
+  function act(name) {
+    const a = ui.open && acc(ui.open);
+    switch (name) {
+      case "next": nextDay(); break;
+      case "reset": state = fresh(); ui.open = null; ui.selected.clear(); commit("Демо сброшено к исходным данным"); break;
+      case "close": ui.open = null; render(); break;
+      case "exec": {
+        const v = view(a);
+        execute(a, v.reco.code, { subject: ui.draft.subject, body: ui.draft.body }, false);
+        ui.draft = null;
+        commit(v.reco.code === "wait_promise" ? null : (v.reco.channel === "email" ? "Письмо записано в журнал как отправленное" : "Выполнено: " + v.reco.label.toLowerCase()));
+        break;
+      }
+      case "enroll": enroll(a); commit("Автосценарий запущен, первый шаг выполнен"); break;
+      case "stop": a.automation.stopped = "Остановлен вручную"; commit("Автосценарий остановлен"); break;
+      case "resolve":
+        a.signals.dispute = null; a.reasonOverride = null;
+        logComm(a, { channel: "task", subject: "Спор урегулирован, счёт подтверждён", status: "Решено" });
+        a.signals.contacted = state.day; commit("Спор закрыт. Рекомендация пересчитана"); break;
+      case "promise": {
+        const d = +document.getElementById("pdays").value;
+        a.signals.promise = { day: state.day + d, madeOn: state.day };
+        logComm(a, { channel: "call", subject: "Обещание оплатить до " + fmtDay(state.day + d), status: "Обещание оплаты" });
+        addTask(a, "Проверить оплату по обещанию", d + 1);
+        commit("Обещание записано, проверка поставлена на " + fmtDay(state.day + d + 1)); break;
+      }
+      case "pay": {
+        const n = parseInt(String(document.getElementById("pay").value).replace(/\D/g, ""), 10);
+        if (!n) { toast("Введите сумму оплаты цифрами"); render(); return; }
+        const paid = recordPayment(a, n, "Оплата внесена вручную");
+        commit("Записана оплата " + money(paid)); break;
+      }
+      case "bulk-auto": {
+        let n = 0;
+        ui.selected.forEach(function (id) { const x = acc(id); if (x && E.balance(x, state.day) && (!x.automation || x.automation.stopped)) { enroll(x); n++; } });
+        ui.selected.clear(); commit("Автосценарий запущен для " + n + " клиентов"); break;
+      }
+      case "bulk-clear": ui.selected.clear(); render(); break;
+    }
+  }
+
+  if (location.hash === "#tasks" || location.hash === "#analytics") ui.tab = location.hash.slice(1);
+  render();
+})();
+</script>
